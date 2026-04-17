@@ -16,7 +16,7 @@ public record PaymentTransaction(
     // Lead Flex: Compact Constructor for Validation (Java 21)
     public PaymentTransaction {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Payment must be positive, Sachin!");
+            throw new IllegalArgumentException("Payment should be positive!");
         }
     }
 }
