@@ -40,8 +40,6 @@ public class PaymentOutcome {
     @Column(nullable = false)
     private Long processingTimeMs;
 
-    // --- ADDITIONAL LEAD-LEVEL FIELDS ---
-
     @Column(name = "idempotency_key", unique = true)
     private String idempotencyKey; // From original event for safety
 
