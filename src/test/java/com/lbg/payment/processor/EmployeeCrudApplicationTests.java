@@ -1,4 +1,4 @@
-package com.example.offer;
+package com.lbg.payment.processor;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

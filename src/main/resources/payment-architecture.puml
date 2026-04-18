@@ -1,0 +1,73 @@
+@startuml
+!pragma layout smetana
+skinparam Style strictuml
+skinparam SequenceMessageAlignment center
+skinparam shadowing false
+skinparam RoundCorner 10
+
+title HCL/Lloyds PayStream: Resilient Payment Pipeline
+
+actor "Customer / Postman" as User
+
+box "payment-ingestor (Port 8080)" #F0F8FF
+    participant "IngestorController" as API
+    participant "AccountService" as AccS
+    database "H2 (Local Cache)" as H2
+    participant "KafkaProducer" as Prod
+end box
+
+queue "Kafka Broker (KRaft)" as Kafka #Yellow
+
+box "payment-processor (Port 8081)" #E8F5E9
+    participant "KafkaConsumer" as Cons
+    participant "OutcomeService" as OutS
+    database "Postgres (Persistence)" as PG
+end box
+
+== DEV SPRINT 1: VALIDATION & INGRESS ==
+User -> API : POST /api/payments
+note right: PaymentRequest (JSON)
+
+API -> AccS : validate(debitId, creditId)
+AccS -> H2 : Lookup Status
+H2 --> AccS : ACTIVE / SUSPENDED
+note over AccS, H2: Seeded from accounts.json at startup
+
+alt If Status is SUSPENDED or NOT_FOUND
+    AccS --> API : Throw ValidationException
+    API --> User : **422 Unprocessable / 404 Not Found**
+else If Accounts are ACTIVE
+    AccS --> API : Validation Passed
+    API -> Prod : dispatch(PaymentEvent)
+    Prod -> Kafka : Publish Topic: 'payments.submitted'\nKey: **debitAccountId**
+    note right: Keyed by debitId to ensure ordering
+    Kafka --> Prod : Broker Ack (acks=all)
+    API --> User : **202 Accepted** (paymentId)
+end
+
+== DEV SPRINT 2: PROCESSING & PERSISTENCE ==
+Kafka -> Cons : Poll PaymentEvent
+note right: Concurrency: 6 (Matches Partitions)
+
+Cons -> OutS : process(event)
+note over OutS, PG: **Transactional Boundary (@Transactional)**
+
+group #FFEBEE [IDEMPOTENCY & RULES]
+    OutS -> PG : Guard: Check if paymentId exists
+    PG --> OutS : Result: New Payment
+
+    alt Amount > £250,000
+        OutS -> OutS : Set Status: **HELD**
+    else
+        OutS -> OutS : Set Status: **PROCESSED**
+    end
+
+    OutS -> PG : Save Outcome (Audit Trail)
+    PG --> OutS : **Commit Success**
+end
+
+Cons -> Kafka : **ack.acknowledge()**
+note over Kafka, Cons: **Manual Ack Strategy:** \nOffset ONLY moves after PG success.\nSurvivability during DB downtime.
+
+footer HCL Hackathon 2025 - PayStream Architecture (Sachin - Lead Coder)
+@enduml

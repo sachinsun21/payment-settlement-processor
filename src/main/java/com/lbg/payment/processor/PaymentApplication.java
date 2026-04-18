@@ -1,9 +1,11 @@
-package com.example.offer;
+package com.lbg.payment.processor;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.kafka.annotation.EnableKafka;
 
 @SpringBootApplication
+@EnableKafka
 public class PaymentApplication {
 
     public static void main(String[] args) {

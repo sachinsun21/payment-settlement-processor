@@ -1,15 +1,23 @@
 spring:
   application:
     name: LloydsPaymentFortress
+
+  h2:
+    console:
+      enabled: true
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/payment_fortress
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
+    url: jdbc:h2:mem:consumer
+    username: test
+    password: test
+    hikari:
+      driver-class-name: org.h2.Driver
   threads:
     virtual:
       enabled: true
   jpa:
+    database:
+      platform: org.hibernate.dialect.H2Dialect
       hibernate:
         ddl-auto: update # Forces Hibernate to create the table
       show-sql: true
@@ -23,7 +31,7 @@ spring:
       properties:
         enable.idempotence: true
     consumer:
-      group-id: payment-settlement-service
+      group-id: payment-processor-service
       auto-offset-reset: earliest
       enable-auto-commit: false # Crucial for Manual Acks
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -33,13 +41,12 @@ spring:
         # Replace with your ACTUAL package name for the Record
         spring.json.trusted.packages: "com.example.offer.dto"
         spring.json.value.default.type: "com.example.offer.dto.PaymentTransaction"
-aws:
-  accessKeyId: ${AWS_ACCESS_KEY}
-  secretKey: ${AWS_SECRET_KEY}
-  region: ap-south-2
-  s3:
-    bucketName: lloyds-payment-evidence # Matches your @Value("${aws.s3.bucketName}")
-    # Future multi-bucket expansion:
-    # evidenceBucket: lloyds-payment-evidence
-    # auditBucket: lloyds-transaction-logs
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+  endpoint:
+    health:
+      show-details: always

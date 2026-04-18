@@ -1,4 +1,4 @@
-package com.example.offer.exception;
+package com.lbg.payment.processor.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
